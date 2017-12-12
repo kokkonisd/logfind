@@ -1,5 +1,6 @@
 /*
 Written by Dimitris Kokkonis
+https://github.com/kokkonisd
 
 Inspired by an exercise in Zed A. Shaw's book
 "Learn C The Hard Way"
@@ -15,64 +16,9 @@ Inspired by an exercise in Zed A. Shaw's book
 #define ENDSTR "END_OF_LOG_FILES"
 // redundant, needs to be removed & fixed
 #define LOGS "/var/log/"
-#define LOG_FILE_FILENAMES "~/.logfind"
+#define LOGFILE_LIST "/.logfind"
 #define MAX_WORD_SIZE 1024
-
-char **get_log_files (char *logdir)
-{
-    DIR *dir;
-    struct dirent *ent;
-    int dircount = 0;
-    int max_name_len = 0;
-
-
-    dir = opendir(logdir);
-    check(dir != NULL, "Failed to open log directory.");
-    
-    while ((ent = readdir(dir)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-            continue;
-
-        dircount++;
-
-        if (strlen(ent->d_name) > max_name_len)
-            max_name_len = strlen(ent->d_name);
-    }
-
-    closedir(dir);
-
-    char final_name[1000];
-
-    char **logfiles = malloc((dircount + 1) * sizeof(char *));
-    check(logfiles != NULL, "Memory error.");
-
-    dir = opendir(logdir);
-    check(dir != NULL, "Failed to open log directory.");
-    for (int i = 0; i < dircount; i++) {
-        logfiles[i] = malloc((max_name_len + strlen(logdir) + 1) * sizeof(char));
-        check(logfiles[i] != NULL, "Memory error.");
-
-        ent = readdir(dir);
-
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
-            i--;
-            continue;
-        }
-
-        strcpy(final_name, logdir);
-        strcat(final_name, ent->d_name);
-        strcpy(logfiles[i], final_name);
-    }
-
-    logfiles[dircount] = ENDSTR;
-
-    closedir(dir);
-
-    return logfiles;
-
-error:
-    return NULL;
-}
+#define MAX_PATH_SIZE (MAX_WORD_SIZE * 2)
 
 void free_log_files (char **logfiles)
 {
@@ -87,18 +33,89 @@ void free_log_files (char **logfiles)
         free(logfiles);
 }
 
-char *get_word (FILE *fp) {
+char *replace_tilde (char *string)
+{
+    if (string[0] != '~')
+        return string;
+
+    char *result;
+
+    int length = strlen(string) - 1 + strlen(getenv("HOME"));
+    result = malloc(length * sizeof(char));
+
+    strcpy(result, getenv("HOME"));
+    strcat(result, ++string);
+
+    return result;
+}
+
+char **get_log_files ()
+{
+    FILE *logs;
+    char filename[MAX_PATH_SIZE];
+    int rc, count = 0;
+    char **log_files = NULL;
+
+    int list_length = strlen(getenv("HOME")) + strlen(LOGFILE_LIST);
+    char *list = malloc(list_length * sizeof(char));
+    strcpy(list, getenv("HOME"));
+    strcat(list, LOGFILE_LIST);
+
+    logs = fopen(list, "r");
+    check(logs != NULL, "Couldn't open %s to get the list of log files. \
+        \nMake sure you have permission to read it.", list);
+
+    free(list);
+
+    rc = fscanf(logs, "%s", filename);
+    while (!feof(logs)) {
+        check(rc == 1, "Couldn't read filenames.");
+        count++;
+        rc = fscanf(logs, "%s", filename);
+    }
+
+    log_files = malloc((count + 1) * sizeof(char *));
+    check(log_files != NULL, "Memory error.");
+
+    rewind(logs);
+    
+    for (int i = 0; i < count; i++) {
+        rc = fscanf(logs, "%s", filename);
+        check(rc == 1, "Couldn't read filenames.");
+
+        if (filename[MAX_PATH_SIZE - 1] == '\n')
+            filename[MAX_PATH_SIZE - 1] = '\0';
+
+        log_files[i] = malloc(MAX_PATH_SIZE * sizeof(char));
+        check(log_files[i] != NULL, "Memory error.");
+
+        log_files[i] = replace_tilde(filename);
+    }
+
+    log_files[count] = ENDSTR;
+
+    return log_files;
+
+error:
+    if (logs) fclose(logs);
+    if (log_files) free_log_files(log_files);
+    return NULL;
+}
+
+char *get_word (FILE *fp) 
+{
     char word[MAX_WORD_SIZE];
     int ch, i = 0;
 
-    while (EOF != (ch = fgetc(fp)) && !(isalpha(ch) || isdigit(ch))); // skip
+    // skip stuff that isn't a word
+    while (((ch = fgetc(fp)) != EOF) && !(isalpha(ch) || isdigit(ch)));
 
     if (ch == EOF)
         return NULL;
     
     do {
         word[i++] = tolower(ch);
-    } while (EOF != (ch = fgetc(fp)) && (isalpha(ch) || isdigit(ch)));
+    } while (((ch = fgetc(fp)) != EOF) && (isalpha(ch) || isdigit(ch)));
 
     word[i] = '\0';
     return strdup(word);
@@ -133,7 +150,7 @@ error:
 
 int parse_and (int argc, char *argv[])
 {
-    char **log_files = get_log_files(LOGS);
+    char **log_files = get_log_files();
     check(log_files != NULL, "Failed to get log files.");
 
     int i = 0;
@@ -163,7 +180,7 @@ error:
 
 int parse_or (int argc, char *argv[])
 {
-    char **log_files = get_log_files(LOGS);
+    char **log_files = get_log_files();
     check(log_files != NULL, "Failed to get log files.");
 
     int i = 0;
