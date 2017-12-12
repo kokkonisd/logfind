@@ -13,7 +13,9 @@ Inspired by an exercise in Zed A. Shaw's book
 #include "dbg.h"
 
 #define ENDSTR "END_OF_LOG_FILES"
+// redundant, needs to be removed & fixed
 #define LOGS "/var/log/"
+#define LOG_FILE_FILENAMES "~/.logfind"
 #define MAX_WORD_SIZE 1024
 
 char **get_log_files (char *logdir)
