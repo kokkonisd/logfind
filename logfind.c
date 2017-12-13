@@ -227,7 +227,8 @@ error:
 
 int main (int argc, char *argv[])
 {
-    check(argc >= 2, "Usage: %s [-o] search-term-1 search-term-2 ...", argv[0]);
+    check(argc >= 2, "Usage: %s [-o] search-term-1 search-term-2 ...\
+        \nRun %s --help for a complete list of available commands", argv[0], argv[0]);
 
     check(argc != 2 || strcmp(argv[1], "-o") != 0, "Error: parameter -o requires at least one argument.");
 
@@ -235,7 +236,19 @@ int main (int argc, char *argv[])
     if (strcmp(argv[1], "-o") == 0) {
         rc = parse_or(argc, argv);
         check(rc != -1, "Couldn't parse arguments.");
+    } else if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
+        printf("%s\n", VERSION);
+    } else if (strcmp(argv[1], "--help") == 0) {
+        printf("Usage: %s [command] <search-term-1> <search-term-2> ...\
+            \nAvailable commands:\n\t[none] : search for terms with logical AND\
+            \n\t-o : search for terms with logical OR\
+            \n\t-v, --version : show logfind's current version\
+            \n\t--help : show this help screen\
+            \nFor more details, refer to https://github.com/kokkonisd/logfind\n", argv[0]);
     } else {
+        check(argv[1][0] != '-', "Unknown command '%s'\
+            \nRun %s --help for a complete list of available commands", argv[1], argv[0]);
+
         rc = parse_and(argc, argv);
         check(rc != -1, "Couldn't parse arguments.");
     }
