@@ -11,15 +11,9 @@ Inspired by an exercise in Zed A. Shaw's book
 #include <dirent.h>
 #include <string.h>
 #include <ctype.h>
-#include "dbg.h"
+#include "logfind.h"
 
-#define ENDSTR "END_OF_LOG_FILES"
-// redundant, needs to be removed & fixed
-#define LOGS "/var/log/"
-#define LOGFILE_LIST "/.logfind"
-#define MAX_WORD_SIZE 1024
-#define MAX_PATH_SIZE (MAX_WORD_SIZE * 2)
-
+// free the 2D filename array's memory
 void free_log_files (char **logfiles)
 {
     int i = 0;
@@ -33,6 +27,7 @@ void free_log_files (char **logfiles)
         free(logfiles);
 }
 
+// replace the tilde in the pathnames by the HOME path
 char *replace_tilde (char *string)
 {
     if (string[0] != '~')
@@ -41,7 +36,7 @@ char *replace_tilde (char *string)
     char *result;
 
     int length = strlen(string) - 1 + strlen(getenv("HOME"));
-    result = malloc(length * sizeof(char));
+    result = malloc((length + 1) * sizeof(char));
 
     strcpy(result, getenv("HOME"));
     strcat(result, ++string);
@@ -49,6 +44,7 @@ char *replace_tilde (char *string)
     return result;
 }
 
+// get the log filenames from ~/.logfind
 char **get_log_files ()
 {
     FILE *logs;
@@ -56,17 +52,12 @@ char **get_log_files ()
     int rc, count = 0;
     char **log_files = NULL;
 
-    int list_length = strlen(getenv("HOME")) + strlen(LOGFILE_LIST);
-    char *list = malloc(list_length * sizeof(char));
-    strcpy(list, getenv("HOME"));
-    strcat(list, LOGFILE_LIST);
-
-    logs = fopen(list, "r");
+    // open the file and check that it opened correctly
+    logs = fopen(replace_tilde(LOGFILE_LIST), "r");
     check(logs != NULL, "Couldn't open %s to get the list of log files. \
-        \nMake sure you have permission to read it.", list);
+        \nMake sure you have permission to read it.", replace_tilde(LOGFILE_LIST));
 
-    free(list);
-
+    // count filenames in ~/.logfind
     rc = fscanf(logs, "%s", filename);
     while (!feof(logs)) {
         check(rc == 1, "Couldn't read filenames.");
@@ -74,15 +65,18 @@ char **get_log_files ()
         rc = fscanf(logs, "%s", filename);
     }
 
+    // allocate memory for the log filenames
     log_files = malloc((count + 1) * sizeof(char *));
     check(log_files != NULL, "Memory error.");
 
+    // re-read the file, this time storing the names in log_files
     rewind(logs);
     
     for (int i = 0; i < count; i++) {
         rc = fscanf(logs, "%s", filename);
         check(rc == 1, "Couldn't read filenames.");
 
+        // remove trailing newlines
         if (filename[MAX_PATH_SIZE - 1] == '\n')
             filename[MAX_PATH_SIZE - 1] = '\0';
 
@@ -92,16 +86,22 @@ char **get_log_files ()
         log_files[i] = replace_tilde(filename);
     }
 
+    /** 
+     * put the end string as the last element
+     * so we know when to stop reading file names
+     */
     log_files[count] = ENDSTR;
 
     return log_files;
 
 error:
+    // failsafe exit
     if (logs) fclose(logs);
     if (log_files) free_log_files(log_files);
     return NULL;
 }
 
+// get a word from a file
 char *get_word (FILE *fp) 
 {
     char word[MAX_WORD_SIZE];
@@ -110,17 +110,21 @@ char *get_word (FILE *fp)
     // skip stuff that isn't a word
     while (((ch = fgetc(fp)) != EOF) && !(isalpha(ch) || isdigit(ch)));
 
+    // return NULL if there isn't any words left
     if (ch == EOF)
         return NULL;
     
+    // copy word
     do {
         word[i++] = tolower(ch);
     } while (((ch = fgetc(fp)) != EOF) && (isalpha(ch) || isdigit(ch)));
 
     word[i] = '\0';
+
     return strdup(word);
 }
 
+// check if a string is in a file
 int is_in_file (char *string, char *filename)
 {
     FILE *f;
@@ -133,6 +137,8 @@ int is_in_file (char *string, char *filename)
 
     char *word;
     word = get_word(f);
+
+    // look for the word in the file
     while (word != NULL) {
         if (strcmp(word, string) == 0)
             return 1;
@@ -148,21 +154,26 @@ error:
     return -1;
 }
 
+// parse arguments with logical AND
 int parse_and (int argc, char *argv[])
 {
     char **log_files = get_log_files();
     check(log_files != NULL, "Failed to get log files.");
 
     int i = 0;
+    // while we haven't reached the end of filenames
     while (strcmp(log_files[i], ENDSTR) != 0) {
         int found = 1;
+        // check if one of the terms is not found in current file
         for (int j = 1; j < argc; j++) {
             if (!is_in_file(argv[j], log_files[i])) {
+                // logical AND is false
                 found = 0;
                 break;
             }
         }
 
+        // if the file passed the test, print its name
         if (found)
             printf("%s\n", log_files[i]);
 
@@ -178,21 +189,26 @@ error:
     return -1;
 }
 
+// parse arguments with logical OR
 int parse_or (int argc, char *argv[])
 {
     char **log_files = get_log_files();
     check(log_files != NULL, "Failed to get log files.");
 
     int i = 0;
+    // while we haven't reached the end of filenames
     while (strcmp(log_files[i], ENDSTR) != 0) {
         int found = 0;
+        // check if at least one of the terms is found in current file
         for (int j = 1; j < argc; j++) {
             if (is_in_file(argv[j], log_files[i])) {
+                // logical OR is true
                 found = 1;
                 break;
             }
         }
 
+        // if the file passed the test, print its name
         if (found)
             printf("%s\n", log_files[i]);
 
@@ -207,6 +223,7 @@ error:
     if (log_files) free_log_files(log_files);
     return -1;
 }
+
 
 int main (int argc, char *argv[])
 {
