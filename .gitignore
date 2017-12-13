@@ -1,3 +1,5 @@
 logfind
 logfind.o
 logfind*.tar.gz
+.deploy_mkfile
+

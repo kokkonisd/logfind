@@ -1,5 +1,6 @@
 CC = cc
 CFLAGS = -Wall -g
+VERSION = 1.1
 
 all : logfind
 
@@ -18,7 +19,15 @@ logfind.o : logfind.c
 
 logfind.c : logfind.h
 
-clean :
-	rm -rf logfind logfind.o *.dSYM *.o
+deploy : clean logfind
+	mkdir logfind-tmp/
+	cp logfind.* logfind-tmp/
+	cp .deploy_mkfile logfind-tmp/Makefile
+	tar -cvzf logfind-$(VERSION).tar.gz logfind-tmp/
+	rm -rf logfind-tmp/
+	rm -rf logfind logfind.o *.dSYM
 
-.PHONY : all install uninstall clean
+clean :
+	rm -rf logfind logfind.o *.dSYM
+
+.PHONY : all install uninstall deploy clean
