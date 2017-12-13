@@ -16,5 +16,9 @@ logfind : logfind.o
 logfind.o : logfind.c
 	$(CC) $(CFLAGS) -c logfind.c
 
+logfind.c : logfind.h
+
 clean :
 	rm -rf logfind logfind.o *.dSYM *.o
+
+.PHONY : all install uninstall clean
