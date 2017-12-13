@@ -31,7 +31,7 @@ void free_log_files (char **logfiles)
 char **get_log_files (void)
 {
     FILE *logs = NULL;
-    char filename[MAX_PATH_SIZE];
+    char filename[MAX_PATH_SIZE] = "";
     int rc;
     int flags = 0;
     glob_t globber;
@@ -51,6 +51,9 @@ char **get_log_files (void)
     // get filenames in ~/.logfind with glob()
     while (!feof(logs)) {
         fscanf(logs, "%s\n", filename);
+        // empty ~/.logfind file
+        if (strlen(filename) == 0)
+            continue;
         // if it's the first filename, overwrite "~/.logfind"
         flags |= (globber.gl_pathc > 1) ? GLOB_APPEND : 0;
         rc = glob(filename, flags, NULL, &globber);

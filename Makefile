@@ -19,14 +19,6 @@ logfind.o : logfind.c
 
 logfind.c : logfind.h
 
-deploy : clean logfind
-	mkdir logfind-tmp/
-	cp logfind.* logfind-tmp/
-	cp .deploy_mkfile logfind-tmp/Makefile
-	tar -cvzf logfind-$(VERSION).tar.gz logfind-tmp/
-	rm -rf logfind-tmp/
-	rm -rf logfind logfind.o *.dSYM
-
 clean :
 	rm -rf logfind logfind.o *.dSYM
 
