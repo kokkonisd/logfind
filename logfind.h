@@ -19,4 +19,4 @@
 #define LOGFILE_LIST "~/.logfind"
 #define MAX_WORD_SIZE 1024
 #define MAX_PATH_SIZE (MAX_WORD_SIZE * 2)
-#define VERSION "1.0.0"
+#define VERSION "1.1"
