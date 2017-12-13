@@ -5,7 +5,7 @@ Inspired by Zed A. Shaw's ["Learn C The Hard Way"](https://learncodethehardway.o
 
 ## how to install logfind
 
-To install logfind, simply get the [latest version], decompress it, `cd` into it, then run:
+To install logfind, simply get the [latest version](https://github.com/kokkonisd/logfind/releases/tag/v1.1), decompress it, `cd` into it, then run:
 
 ```bash
 $ make install
