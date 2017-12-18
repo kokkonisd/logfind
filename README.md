@@ -40,7 +40,6 @@ will output a list of log files containing both "wifi" _and_ "system".
 
 To change the default logical _and_ behaviour, simply use the `-o` option.
 For example,
-For example,
 ```bash
 $ logfind -o wifi system
 ```
