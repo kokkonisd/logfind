@@ -1,5 +1,5 @@
-#ifndef __dbg_h__
-#define __dbg_h__
+#ifndef __logfind_h__
+#define __logfind_h__
 
 #include <stdio.h>
 #include <errno.h>
